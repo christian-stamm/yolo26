@@ -1,5 +1,4 @@
 #include "corekit/cuda/core.hpp"
-#include "corekit/cuda/draw.hpp"
 #include "corekit/utils/color.hpp"
 #include "yolo/bbox.hpp"
 #include "yolo/segm.hpp"
@@ -57,10 +56,10 @@ namespace {
 } // namespace
 
 __global__ void buildSegmKernel(
-    const float*   d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
-    uint*          d_count,  // Atomic counter for valid detections
-    Letterbox*     d_letbox, // Letterbox info for coordinate transformation
-    DeviceStorage  mem       // Memory manager for intermediate buffers
+    const float*  d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
+    uint*         d_count,  // Atomic counter for valid detections
+    Letterbox*    d_letbox, // Letterbox info for coordinate transformation
+    DeviceStorage mem       // Memory manager for intermediate buffers
 )
 {
     uint idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -122,11 +121,11 @@ __global__ void buildMaskKernel(
 }
 
 __global__ void overlayMaskKernel(
-    uchar*         d_img,    // Image data on device
-    uint2          img_size, // Image dimensions
-    Letterbox*     d_letbox, // Letterbox info for coordinate transformation
-    uint           count,    // Number of valid detections
-    DeviceStorage  mem       // Memory manager for intermediate buffers
+    uchar*        d_img,    // Image data on device
+    uint2         img_size, // Image dimensions
+    Letterbox*    d_letbox, // Letterbox info for coordinate transformation
+    uint          count,    // Number of valid detections
+    DeviceStorage mem       // Memory manager for intermediate buffers
 )
 {
     // 2D grid: blockIdx.x = detection index, remaining dims = pixel index
@@ -231,7 +230,7 @@ __global__ void overlayMaskKernel(
 
     // Blend with image using alpha
     const int pixel_idx = (img_y * img_size.x + img_x) * 3;
-    
+
     d_img[pixel_idx + 0] = (uchar)(d_img[pixel_idx + 0] * (1.0f - alpha * 0.5f) + color_u8.x * alpha * 0.5f);
     d_img[pixel_idx + 1] = (uchar)(d_img[pixel_idx + 1] * (1.0f - alpha * 0.5f) + color_u8.y * alpha * 0.5f);
     d_img[pixel_idx + 2] = (uchar)(d_img[pixel_idx + 2] * (1.0f - alpha * 0.5f) + color_u8.z * alpha * 0.5f);
@@ -296,7 +295,8 @@ void Segm::drawSegm(
     const uint2 img_size         = d_img.getSize();
     const uint  max_image_pixels = img_size.x * img_size.y;
     dim3        overlayGridSize(count, (max_image_pixels + blockSize - 1) / blockSize);
-    overlayMaskKernel<<<overlayGridSize, blockSize, 0, stream>>>(d_img.ptr(), img_size, mem.d_letbox.ptr(), count, mem.device());
+    overlayMaskKernel<<<overlayGridSize, blockSize, 0, stream>>>(
+        d_img.ptr(), img_size, mem.d_letbox.ptr(), count, mem.device());
 
     check_cuda();
 }

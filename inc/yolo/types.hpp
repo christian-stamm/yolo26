@@ -123,28 +123,29 @@ struct Storage {
 
         palette = Color::sample(classes.size());
 
-        mem.d_boxes = NvMem<BoundingBox>(MAX_DETS);
-        mem.d_letbox = NvMem<Letterbox>(1);
-        mem.d_skelets = NvMem<Keypoint>(MAX_DETS * NUM_KPS); // Flatten array
-        mem.d_proto = NvMem<float>(MAX_DETS * MASK_WIDTH * MASK_HEIGHT); // Flatten array
-        mem.d_coeffs = NvMem<float>(MAX_DETS * MASK_COEFFS); // Flatten array
-        mem.d_bones = NvMem<Bone>(bones.size());
+        mem.d_boxes   = NvMem<BoundingBox>(MAX_DETS);
+        mem.d_letbox  = NvMem<Letterbox>(1);
+        mem.d_skelets = NvMem<Keypoint>(MAX_DETS * NUM_KPS);               // Flatten array
+        mem.d_proto   = NvMem<float>(MAX_DETS * MASK_WIDTH * MASK_HEIGHT); // Flatten array
+        mem.d_coeffs  = NvMem<float>(MAX_DETS * MASK_COEFFS);              // Flatten array
+        mem.d_bones   = NvMem<Bone>(bones.size());
         mem.d_palette = NvMem<Color>(palette.size());
         mem.d_classes = NvMem<char>(classes.size() * MAX_TEXT_LEN);
-        mem.d_lines = NvMem<Line>(MAX_PRIMITVES);
-        mem.d_rects = NvMem<Rect>(MAX_PRIMITVES);
-        mem.d_texts = NvMem<Text>(MAX_PRIMITVES);
+        mem.d_lines   = NvMem<Line>(MAX_PRIMITVES);
+        mem.d_rects   = NvMem<Rect>(MAX_PRIMITVES);
+        mem.d_texts   = NvMem<Text>(MAX_PRIMITVES);
         mem.d_circles = NvMem<Circle>(MAX_PRIMITVES);
-        
+
         // Counters for atomic operations
-        mem.d_count = NvMem<uint>(1);
-        mem.d_bone_count = NvMem<uint>(1);
+        mem.d_count       = NvMem<uint>(1);
+        mem.d_bone_count  = NvMem<uint>(1);
         mem.d_joint_count = NvMem<uint>(1);
 
         mem.d_txtfont = Font::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", DEF_TEXT_SIZE);
 
         cudaMemcpyAsync(mem.d_bones.ptr(), bones.data(), bones.size() * sizeof(Bone), cudaMemcpyHostToDevice, stream);
-        cudaMemcpyAsync(mem.d_palette.ptr(), palette.data(), palette.size() * sizeof(Color), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(
+            mem.d_palette.ptr(), palette.data(), palette.size() * sizeof(Color), cudaMemcpyHostToDevice, stream);
 
         for (uint cls = 0; cls < classes.size(); cls++) {
             const Name&  name = classes.at(cls);
@@ -154,7 +155,8 @@ struct Storage {
         }
 
         for (uint det = 0; det < MAX_DETS; det++) {
-            cudaMemcpyAsync(&mem.d_skelets.ptr()[det * NUM_KPS], keypts.data(), sizeof(Skeleton), cudaMemcpyHostToDevice, stream);
+            cudaMemcpyAsync(
+                &mem.d_skelets.ptr()[det * NUM_KPS], keypts.data(), sizeof(Skeleton), cudaMemcpyHostToDevice, stream);
         }
 
         return mem;
@@ -166,7 +168,8 @@ struct Storage {
     }
 
     // Get device-friendly view with raw pointers
-    DeviceStorage device() const {
+    DeviceStorage device() const
+    {
         return DeviceStorage{
             d_letbox.ptr(),
             d_boxes.ptr(),
@@ -183,16 +186,15 @@ struct Storage {
             d_circles.ptr(),
             d_count.ptr(),
             d_bone_count.ptr(),
-            d_joint_count.ptr()
-        };
+            d_joint_count.ptr()};
     }
 
     NvMem<Letterbox>   d_letbox;
     NvMem<BoundingBox> d_boxes;
-    NvMem<Keypoint>    d_skelets;  // Flattened: MAX_DETS * NUM_KPS
+    NvMem<Keypoint>    d_skelets; // Flattened: MAX_DETS * NUM_KPS
     NvMem<Bone>        d_bones;
-    NvMem<float>       d_proto;    // Flattened: MAX_DETS * MASK_WIDTH * MASK_HEIGHT
-    NvMem<float>       d_coeffs;   // Flattened: MAX_DETS * MASK_COEFFS
+    NvMem<float>       d_proto;  // Flattened: MAX_DETS * MASK_WIDTH * MASK_HEIGHT
+    NvMem<float>       d_coeffs; // Flattened: MAX_DETS * MASK_COEFFS
     NvMem<Color>       d_palette;
     NvMem<char>        d_classes;
     Font*              d_txtfont;
@@ -200,11 +202,11 @@ struct Storage {
     NvMem<Rect>        d_rects;
     NvMem<Text>        d_texts;
     NvMem<Circle>      d_circles;
-    
+
     // Atomic counters
-    NvMem<uint>        d_count;
-    NvMem<uint>        d_bone_count;
-    NvMem<uint>        d_joint_count;
+    NvMem<uint> d_count;
+    NvMem<uint> d_bone_count;
+    NvMem<uint> d_joint_count;
 };
 
 } // namespace yolo

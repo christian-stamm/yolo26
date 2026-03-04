@@ -59,7 +59,6 @@ class Base : public Model {
         cudaMemcpyAsync(
             result.data(), storage.d_boxes.ptr(), letter.dets * sizeof(BoundingBox), cudaMemcpyDeviceToHost, stream);
 
-
         check_cuda();
         return result;
     }
@@ -102,12 +101,6 @@ class Base : public Model {
         }
 
         return true;
-    }
-
-    virtual bool cleanup() override
-    {
-        Storage::free(storage, stream);
-        return Model::cleanup();
     }
 
     Path    config;

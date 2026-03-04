@@ -16,20 +16,21 @@ add_library(yolo26 STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/segm.cu
 )
 
-add_dependencies(yolo26 
-    corekit-core
-    corekit-cuda
+target_include_directories(yolo26
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_BINARY_DIR}
 )
 
-target_include_directories(yolo26 PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    ${CMAKE_BINARY_DIR}
+target_link_libraries(yolo26
+    PUBLIC
+        corekit-core
+        corekit-cuda
 )
 
-target_link_libraries(yolo26 PUBLIC
-    corekit-core
-    corekit-cuda
-)
+add_library(yolo26::yolo26 ALIAS yolo26)
 
 ###################################################################
 
@@ -37,13 +38,15 @@ add_executable(yolo26_app
     ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
 )
 
-target_include_directories(yolo26_app PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    ${CMAKE_BINARY_DIR}
+target_include_directories(yolo26_app
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+        ${CMAKE_BINARY_DIR}
 )
 
-target_link_libraries(yolo26_app PUBLIC 
-    yolo26
+target_link_libraries(yolo26_app
+    PRIVATE
+        yolo26
 )
 
 # NVCC struggles with C++20 ranges used by nlohmann::json; disable ranges in CUDA builds.

@@ -1,5 +1,4 @@
 #include "corekit/cuda/core.hpp"
-#include "corekit/cuda/draw.hpp"
 #include "corekit/utils/color.hpp"
 #include "yolo/bbox.hpp"
 #include "yolo/pose.hpp"
@@ -61,10 +60,10 @@ __device__ __forceinline__ uchar4 rgb2col(Color rgb)
 }
 
 __global__ void buildPoseKernel(
-    const float*   d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
-    uint*          d_count,  // Atomic counter for valid detections
-    Letterbox*     d_letbox, // Letterbox info for coordinate transformation
-    DeviceStorage  mem       // Memory manager for intermediate buffers
+    const float*  d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
+    uint*         d_count,  // Atomic counter for valid detections
+    Letterbox*    d_letbox, // Letterbox info for coordinate transformation
+    DeviceStorage mem       // Memory manager for intermediate buffers
 )
 {
     uint idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -101,10 +100,10 @@ __global__ void buildPoseKernel(
 }
 
 __global__ void extractPosePartsKernel(
-    uint           count,         // Number of valid boxes
-    uint*          d_bone_count,  // Atomic counter for bones
-    uint*          d_joint_count, // Atomic counter for joints
-    DeviceStorage  mem            // Memory manager for intermediate buffers
+    uint          count,         // Number of valid boxes
+    uint*         d_bone_count,  // Atomic counter for bones
+    uint*         d_joint_count, // Atomic counter for joints
+    DeviceStorage mem            // Memory manager for intermediate buffers
 )
 {
     uint idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -206,7 +205,8 @@ void Pose::drawPose(
     int blockSize = 256;
     int gridSize  = (count + blockSize - 1) / blockSize;
 
-    extractPosePartsKernel<<<gridSize, blockSize, 0, stream>>>(count, mem.d_bone_count.ptr(), mem.d_joint_count.ptr(), mem.device());
+    extractPosePartsKernel<<<gridSize, blockSize, 0, stream>>>(
+        count, mem.d_bone_count.ptr(), mem.d_joint_count.ptr(), mem.device());
 
     uint h_bone_count  = 0;
     uint h_joint_count = 0;

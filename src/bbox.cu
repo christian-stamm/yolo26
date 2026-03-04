@@ -1,5 +1,4 @@
 #include "corekit/cuda/core.hpp"
-#include "corekit/cuda/draw.hpp"
 #include "corekit/utils/color.hpp"
 #include "yolo/bbox.hpp"
 #include "yolo/types.hpp"
@@ -56,10 +55,10 @@ namespace {
 } // namespace
 
 __global__ void buildBBoxKernel(
-    const float*   d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
-    uint*          d_count,  // Atomic counter for valid detections
-    Letterbox*     d_letbox, // Letterbox info for coordinate transformation
-    DeviceStorage  mem       // Memory manager for intermediate buffers
+    const float*  d_mout,   // Raw detection data (x0, y0, x1, y1, conf, class_id)
+    uint*         d_count,  // Atomic counter for valid detections
+    Letterbox*    d_letbox, // Letterbox info for coordinate transformation
+    DeviceStorage mem       // Memory manager for intermediate buffers
 )
 {
     uint idx = blockIdx.x * blockDim.x + threadIdx.x;
