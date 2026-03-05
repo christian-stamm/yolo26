@@ -7,6 +7,7 @@
 #include "corekit/utils/filemgr.hpp"
 #include "yolo/types.hpp"
 
+#include <cstdint>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <vector>
@@ -79,6 +80,7 @@ struct DeviceStorage {
     Coeff*       d_coeffs;
     Color*       d_palette;
     char*        d_classes;
+    bool*        d_blacklist;
     Font*        d_txtfont;
     Line*        d_lines;
     Rect*        d_rects;
@@ -98,13 +100,20 @@ struct Storage {
         Storage mem;
 
         std::vector<std::string> classes(NUM_CLS);
+        std::vector<uint8_t>     blacklist(NUM_CLS, 0);
         std::vector<Keypoint>    keypts(NUM_KPS);
         std::vector<Bone>        bones;
         std::vector<Color>       palette;
 
         for (auto& [key, name] : config.at("classes").items()) {
-            uint classId     = std::stoi(key);
-            classes[classId] = name.get<std::string>();
+            uint classId       = std::stoi(key);
+            classes[classId]   = name.get<std::string>();
+            blacklist[classId] = 0; // Default to not blacklisted
+        }
+
+        for (auto& [key, name] : config.at("blacklist").items()) {
+            uint classId       = std::stoi(key);
+            blacklist[classId] = 1; // Mark blacklisted classes
         }
 
         for (auto& keypt : config.at("keypoints")) {
@@ -123,18 +132,19 @@ struct Storage {
 
         palette = Color::sample(classes.size());
 
-        mem.d_boxes   = NvMem<BoundingBox>(MAX_DETS);
-        mem.d_letbox  = NvMem<Letterbox>(1);
-        mem.d_skelets = NvMem<Keypoint>(MAX_DETS * NUM_KPS);               // Flatten array
-        mem.d_proto   = NvMem<float>(MAX_DETS * MASK_WIDTH * MASK_HEIGHT); // Flatten array
-        mem.d_coeffs  = NvMem<float>(MAX_DETS * MASK_COEFFS);              // Flatten array
-        mem.d_bones   = NvMem<Bone>(bones.size());
-        mem.d_palette = NvMem<Color>(palette.size());
-        mem.d_classes = NvMem<char>(classes.size() * MAX_TEXT_LEN);
-        mem.d_lines   = NvMem<Line>(MAX_PRIMITVES);
-        mem.d_rects   = NvMem<Rect>(MAX_PRIMITVES);
-        mem.d_texts   = NvMem<Text>(MAX_PRIMITVES);
-        mem.d_circles = NvMem<Circle>(MAX_PRIMITVES);
+        mem.d_boxes     = NvMem<BoundingBox>(MAX_DETS);
+        mem.d_letbox    = NvMem<Letterbox>(1);
+        mem.d_skelets   = NvMem<Keypoint>(MAX_DETS * NUM_KPS);               // Flatten array
+        mem.d_proto     = NvMem<float>(MAX_DETS * MASK_WIDTH * MASK_HEIGHT); // Flatten array
+        mem.d_coeffs    = NvMem<float>(MAX_DETS * MASK_COEFFS);              // Flatten array
+        mem.d_bones     = NvMem<Bone>(bones.size());
+        mem.d_palette   = NvMem<Color>(palette.size());
+        mem.d_classes   = NvMem<char>(classes.size() * MAX_TEXT_LEN);
+        mem.d_blacklist = NvMem<bool>(blacklist.size());
+        mem.d_lines     = NvMem<Line>(MAX_PRIMITVES);
+        mem.d_rects     = NvMem<Rect>(MAX_PRIMITVES);
+        mem.d_texts     = NvMem<Text>(MAX_PRIMITVES);
+        mem.d_circles   = NvMem<Circle>(MAX_PRIMITVES);
 
         // Counters for atomic operations
         mem.d_count       = NvMem<uint>(1);
@@ -146,6 +156,9 @@ struct Storage {
         cudaMemcpyAsync(mem.d_bones.ptr(), bones.data(), bones.size() * sizeof(Bone), cudaMemcpyHostToDevice, stream);
         cudaMemcpyAsync(
             mem.d_palette.ptr(), palette.data(), palette.size() * sizeof(Color), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(
+            mem.d_blacklist.ptr(), blacklist.data(), blacklist.size() * sizeof(uint8_t), cudaMemcpyHostToDevice,
+            stream);
 
         for (uint cls = 0; cls < classes.size(); cls++) {
             const Name&  name = classes.at(cls);
@@ -179,6 +192,7 @@ struct Storage {
             reinterpret_cast<Coeff*>(d_coeffs.ptr()),
             d_palette.ptr(),
             d_classes.ptr(),
+            d_blacklist.ptr(),
             d_txtfont,
             d_lines.ptr(),
             d_rects.ptr(),
@@ -197,6 +211,7 @@ struct Storage {
     NvMem<float>       d_coeffs; // Flattened: MAX_DETS * MASK_COEFFS
     NvMem<Color>       d_palette;
     NvMem<char>        d_classes;
+    NvMem<bool>        d_blacklist;
     Font*              d_txtfont;
     NvMem<Line>        d_lines;
     NvMem<Rect>        d_rects;
