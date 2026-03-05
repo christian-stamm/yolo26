@@ -32,12 +32,13 @@ namespace {
         shape.y  = (p1.y - p0.y);
     }
 
-    __device__ __forceinline__ bool extractBox(const float* base, Letterbox* letbox, BoundingBox* bbox)
+    __device__ __forceinline__ bool extractBox(
+        const float* base, const bool* blacklist, Letterbox* letbox, BoundingBox* bbox)
     {
         bbox->score = base[4];
         bbox->clsid = base[5];
 
-        if (bbox->score < letbox->conf) {
+        if (bbox->score < letbox->conf || blacklist[bbox->clsid]) {
             return false;
         }
 
@@ -70,7 +71,7 @@ __global__ void buildSegmKernel(
 
     BoundingBox bbox;
 
-    if (extractBox(&d_mout[idx * 38], d_letbox, &bbox)) {
+    if (extractBox(&d_mout[idx * 38], mem.d_blacklist, d_letbox, &bbox)) {
 
         // Atomically increment counter and store bbox
         uint write_idx = atomicAdd(d_count, 1);
